@@ -9,20 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 
-def get_database_path() -> Path:
-	for base in (Path(gettempdir()), Path.cwd(), Path(__file__).resolve().parent):
-		path = base / "lichtblick.db"
-		try:
-			if path.parent.exists() and os.access(path.parent, os.W_OK):
-				return path
-		except OSError:
-			pass
-	return Path(gettempdir()) / "lichtblick.db"
-
-
-DATABASE_PATH = get_database_path()
-DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
-DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+DATABASE_URL = f"sqlite:///lichtblick.db"
 
 class Base(DeclarativeBase):
 	pass
