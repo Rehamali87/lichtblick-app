@@ -29,22 +29,23 @@ st.set_page_config(
 
 
 # ==================================================
-# COOKIE
+# COOKIE CONTROLLER (FEHLERFREI)
 # ==================================================
 
-cookie_controller = CookieController(key="lichtblick_cookie")
+if "cookie_controller" not in st.session_state:
+    st.session_state.cookie_controller = CookieController(key="lichtblick_cookie")
 
-user_key = cookie_controller.get("user_key")
+cookie_controller = st.session_state.cookie_controller
 
+user_key = cookie_controller.get("user_key", key="get_user_key")
 
 if not user_key:
-
     user_key = str(uuid4())
-
     cookie_controller.set(
         "user_key",
         user_key,
-        max_age=60 * 60 * 24 * 365
+        max_age=60 * 60 * 24 * 365,
+        key="set_user_key"
     )
 
 
@@ -115,21 +116,9 @@ st.markdown(
 # TITEL
 # ==================================================
 
-st.markdown(
-    '<div class="light">💡</div>',
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    f'<div class="main-title">{APP_NAME} …</div>',
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    f'<div class="subtitle">{MY_MESSAGE}</div>',
-    unsafe_allow_html=True
-)
-
+st.markdown('<div class="light">💡</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="main-title">{APP_NAME} …</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="subtitle">{MY_MESSAGE}</div>', unsafe_allow_html=True)
 st.write("")
 
 
@@ -157,34 +146,21 @@ text = st.text_area(
 )
 
 
-if st.button(
-    "💛 Erinnerung speichern",
-    use_container_width=True
-):
+if st.button("💛 Erinnerung speichern", use_container_width=True):
 
     if title.strip() or text.strip():
 
         add_memory(
             user_key=user_key,
-            title=title.strip()
-            if title.strip()
-            else "Ein schöner Moment",
-            details=text.strip()
-            if text.strip()
-            else "💛"
+            title=title.strip() if title.strip() else "Ein schöner Moment",
+            details=text.strip() if text.strip() else "💛"
         )
 
-        st.success(
-            "Deine Erinnerung wurde gespeichert. 💛"
-        )
-
+        st.success("Deine Erinnerung wurde gespeichert. 💛")
         st.rerun()
 
     else:
-
-        st.warning(
-            "Schreibe zuerst eine schöne Erinnerung."
-        )
+        st.warning("Schreibe zuerst eine schöne Erinnerung.")
 
 
 # ==================================================
@@ -192,16 +168,10 @@ if st.button(
 # ==================================================
 
 st.divider()
-
 st.header("🌿 Das Leben ruft")
 
+if st.button("✨ Das Leben ruft", use_container_width=True):
 
-if st.button(
-    "✨ Das Leben ruft",
-    use_container_width=True
-):
-
-    # Erinnerungen neu laden
     memories = get_memories(user_key)
 
     if memories:
@@ -232,10 +202,7 @@ if st.button(
         )
 
     else:
-
-        st.info(
-            "🌱 Speichere zuerst eine schöne Erinnerung."
-        )
+        st.info("🌱 Speichere zuerst eine schöne Erinnerung.")
 
 
 # ==================================================
@@ -243,11 +210,9 @@ if st.button(
 # ==================================================
 
 st.divider()
-
 st.header("📖 Meine Erinnerungen")
 
 memories = get_memories(user_key)
-
 
 if memories:
 
@@ -267,7 +232,4 @@ if memories:
         )
 
 else:
-
-    st.write(
-        "Noch keine Erinnerungen. 🌱"
-    )
+    st.write("Noch keine Erinnerungen. 🌱")
