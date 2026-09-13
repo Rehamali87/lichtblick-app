@@ -21,6 +21,11 @@ MY_QUESTION = "Was Schönes könnte heute passieren?"
 # ==================================================
 
 st.set_page_config(page_title=APP_NAME, page_icon="💡", layout="centered")
+with open("text.txt") as wf:
+    wf.write("Hello world")
+
+with open("text.txt") as rf:
+    rf.read()
 
 COLORS = {
     "purple": "#9b59b6", "blue": "#3498db", "green": "#2ecc71",
