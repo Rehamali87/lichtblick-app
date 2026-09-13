@@ -1,96 +1,244 @@
-
-
-
-
-
 import streamlit as st
 import random
 
-# ==================================================
-# 🌟 MEIN LICHTBLICK – HIER PROGRAMMIERE ICH!
-# ==================================================
-# 🟢 ÄNDERE NUR DIESE 4 STELLEN!
+
+# =========================================================
+# DEINE EINSTELLUNGEN
+# =========================================================
 
 APP_NAME = "Lichtblick"
-MY_COLOR = "purple"
+
 MY_MESSAGE = "Das Leben hat schöne Momente."
+
 MY_QUESTION = "Was Schönes könnte heute passieren?"
 
-# ==================================================
-# 🔴 AB HIER NICHT ÄNDERN!
-# ==================================================
+MY_COLOR = "#7B61FF"
 
-st.set_page_config(page_title=APP_NAME, page_icon="💡", layout="centered")
 
-COLORS = {
-    "purple": "#9b59b6", "blue": "#3498db", "green": "#2ecc71",
-    "orange": "#e67e22", "red": "#e74c3c", "pink": "#e91e63"
-}
-selected_color = COLORS.get(MY_COLOR.lower(), "#9b59b6")
+# =========================================================
+# SEITE
+# =========================================================
 
-st.markdown(f"""
-<style>
-body {{ background-color: #fff8e8; }}
-.main-title {{ text-align:center; font-size:42px; font-weight:bold; color:{selected_color}; }}
-.subtitle {{ text-align:center; font-size:20px; color:#6f6256; }}
-.light {{ text-align:center; font-size:80px; }}
-.memory {{ background-color:#fff8e8; padding:20px; border-radius:20px; margin-top:15px; border:3px solid {selected_color}; }}
-</style>
-""", unsafe_allow_html=True)
+st.set_page_config(
+    page_title=APP_NAME,
+    page_icon="💡",
+    layout="centered"
+)
 
-st.markdown('<div class="light">💡</div>', unsafe_allow_html=True)
-st.markdown(f'<div class="main-title">{APP_NAME} …</div>', unsafe_allow_html=True)
-st.markdown(f'<div class="subtitle">{MY_MESSAGE}</div>', unsafe_allow_html=True)
-st.write("")
+
+# =========================================================
+# SPEICHER
+# =========================================================
 
 if "memories" not in st.session_state:
     st.session_state.memories = []
 
-st.header("💛 Eine schöne Erinnerung")
-title = st.text_input("Was war schön?", placeholder="Zum Beispiel: Mein Geburtstag")
-text = st.text_area("Erzähl mir davon …", placeholder="Warum war dieser Moment schön?")
 
-if st.button("💛 Erinnerung speichern"):
-    if title or text:
-        st.session_state.memories.append({
-            "title": title if title else "Ein schöner Moment",
-            "text": text if text else "💛"
-        })
-        st.success("Deine Erinnerung wurde gespeichert. 💛")
+# =========================================================
+# DESIGN
+# =========================================================
+
+st.markdown(
+    f"""
+    <style>
+
+    .stApp {{
+        background-color: #fff8e8;
+    }}
+
+    .title {{
+        text-align: center;
+        color: {MY_COLOR};
+        font-size: 3rem;
+        font-weight: bold;
+        margin-top: 20px;
+    }}
+
+    .subtitle {{
+        text-align: center;
+        color: #555;
+        font-size: 1.2rem;
+        margin-bottom: 30px;
+    }}
+
+    .card {{
+        background-color: white;
+        padding: 25px;
+        border-radius: 20px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        border: 2px solid #eeeeee;
+    }}
+
+    .memory-title {{
+        color: {MY_COLOR};
+        font-size: 1.4rem;
+        font-weight: bold;
+    }}
+
+    .memory-text {{
+        color: #333;
+        font-size: 1.1rem;
+        margin-top: 10px;
+    }}
+
+    .question {{
+        background-color: white;
+        padding: 20px;
+        border-radius: 20px;
+        text-align: center;
+        font-size: 1.2rem;
+        margin-top: 20px;
+    }}
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
+# =========================================================
+# TITEL
+# =========================================================
+
+st.markdown(
+    f'<div class="title">💡 {APP_NAME}</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    f'<div class="subtitle">{MY_MESSAGE}</div>',
+    unsafe_allow_html=True
+)
+
+
+# =========================================================
+# ERINNERUNG SPEICHERN
+# =========================================================
+
+st.markdown("### 🌱 Einen schönen Moment speichern")
+
+title = st.text_input(
+    "Titel",
+    placeholder="Zum Beispiel: Mein Geburtstag"
+)
+
+memory = st.text_area(
+    "Was möchtest du erinnern?",
+    placeholder="Schreibe hier deinen schönen Moment..."
+)
+
+
+if st.button(
+    "💾 Erinnerung speichern",
+    use_container_width=True
+):
+
+    if title.strip() == "":
+        st.warning("Bitte gib einen Titel ein.")
+
+    elif memory.strip() == "":
+        st.warning("Bitte schreibe etwas über deinen Moment.")
+
     else:
-        st.warning("Schreibe zuerst eine schöne Erinnerung.")
 
-st.divider()
-st.header("🌿 Das Leben ruft")
+        st.session_state.memories.append(
+            {
+                "title": title.strip(),
+                "text": memory.strip()
+            }
+        )
 
-if st.button("✨ Das Leben ruft", use_container_width=True):
-    if st.session_state.memories:
-        memory = random.choice(st.session_state.memories)
-        st.markdown(f"""
-        <div class="memory">
-        <h2>❤️ {MY_QUESTION}</h2>
-        <h3>{memory["title"]}</h3>
-        <p>{memory["text"]}</p>
-        <h3>🌿 Das Leben ruft dir zu:</h3>
-        <p>{MY_MESSAGE}</p>
-        <div class="light">✨💡✨</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.success("✨ Deine Erinnerung wurde gespeichert!")
+
+        st.rerun()
+
+
+# =========================================================
+# LICHTBLICK
+# =========================================================
+
+st.markdown("---")
+
+st.markdown("### 🔔 Dein Lichtblick")
+
+if st.button(
+    "💡 Erinnere mich an etwas Schönes",
+    use_container_width=True
+):
+
+    if len(st.session_state.memories) == 0:
+
+        st.info(
+            "Du hast noch keine Erinnerung gespeichert."
+        )
+
     else:
-        st.info("🌱 Speichere zuerst eine schöne Erinnerung.")
 
-st.divider()
-st.header("📖 Meine Erinnerungen")
+        chosen = random.choice(
+            st.session_state.memories
+        )
 
-if st.session_state.memories:
-    for memory in st.session_state.memories:
-        st.markdown(f"""
-        <div class="memory">
-        <h3>💛 {memory["title"]}</h3>
-        <p>{memory["text"]}</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="card">
+
+                <div class="memory-title">
+                    ✨ {chosen["title"]}
+                </div>
+
+                <div class="memory-text">
+                    {chosen["text"]}
+                </div>
+
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            f"""
+            <div class="question">
+                💭 {MY_QUESTION}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+
+# =========================================================
+# MEINE ERINNERUNGEN
+# =========================================================
+
+st.markdown("---")
+
+st.markdown("### 🌟 Meine Erinnerungen")
+
+if len(st.session_state.memories) == 0:
+
+    st.write(
+        "Du hast noch keine Erinnerungen gespeichert."
+    )
+
 else:
-    st.write("Noch keine Erinnerungen. 🌱")
 
+    for item in reversed(
+        st.session_state.memories
+    ):
 
+        st.markdown(
+            f"""
+            <div class="card">
+
+                <div class="memory-title">
+                    {item["title"]}
+                </div>
+
+                <div class="memory-text">
+                    {item["text"]}
+                </div>
+
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
