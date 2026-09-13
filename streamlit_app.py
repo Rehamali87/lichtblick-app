@@ -1,12 +1,16 @@
 import streamlit as st
-import sqlite3
+import pandas as pd
 import random
-import html
+import uuid
+import datetime
+import extra_streamlit_components as stx
+
+from streamlit_gsheets import GSheetsConnection
 
 
-# ==================================================
-# 🌟 HIER KANNST DU DEINE APP ÄNDERN
-# ==================================================
+# ============================================================
+# KINDER-BEREICH – HIER KÖNNEN DIE KINDER IHRE APP ANPASSEN
+# ============================================================
 
 APP_NAME = "Lichtblick"
 
@@ -17,9 +21,9 @@ MY_MESSAGE = "Das Leben hat schöne Momente."
 MY_QUESTION = "Was Schönes könnte heute passieren?"
 
 
-# ==================================================
-# 🔴 AB HIER NICHT ÄNDERN
-# ==================================================
+# ============================================================
+# SEITE
+# ============================================================
 
 st.set_page_config(
     page_title=APP_NAME,
@@ -28,109 +32,189 @@ st.set_page_config(
 )
 
 
-# ==================================================
-# DATENBANK
-# ==================================================
+# ============================================================
+# COOKIE MANAGER
+# ============================================================
 
-DATABASE = "lichtblick.db"
+@st.cache_resource
+def get_cookie_manager():
+    return stx.CookieManager()
 
 
+cookie_manager = get_cookie_manager()
+
+COOKIE_NAME = "lichtblick_browser_id"
+
+browser_id = cookie_manager.get(COOKIE_NAME)
+
+
+# ------------------------------------------------------------
+# Wenn dieser Browser noch keine ID hat:
+# neue zufällige ID erzeugen
+# ------------------------------------------------------------
+
+if not browser_id:
+
+    browser_id = str(uuid.uuid4())
+
+    cookie_manager.set(
+        COOKIE_NAME,
+        browser_id,
+        expires_at=datetime.datetime.now()
+        + datetime.timedelta(days=3650)
+    )
+
+    st.session_state["new_browser"] = True
+
+    st.rerun()
+
+
+# ============================================================
+# GOOGLE SHEETS
+# ============================================================
+
+@st.cache_resource
 def get_connection():
-    return sqlite3.connect(
-        DATABASE,
-        check_same_thread=False
+    return st.connection(
+        "gsheets",
+        type=GSheetsConnection
     )
 
 
-def create_database():
-    conn = get_connection()
-    cursor = conn.cursor()
+conn = get_connection()
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS memories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            child_code TEXT NOT NULL,
-            title TEXT NOT NULL,
-            text TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+# ============================================================
+# DATEN LADEN
+# ============================================================
+
+def load_memories():
+
+    try:
+
+        df = conn.read(
+            worksheet="Sheet1",
+            ttl=0
         )
-    """)
 
-    conn.commit()
-    conn.close()
+        if df is None or df.empty:
+            return pd.DataFrame(
+                columns=[
+                    "browser_id",
+                    "title",
+                    "memory",
+                    "created_at"
+                ]
+            )
 
+        df = df.fillna("")
 
-create_database()
+        # Nur Erinnerungen dieses Browsers
+        own_memories = df[
+            df["browser_id"].astype(str) == str(browser_id)
+        ]
 
+        return own_memories
 
-# ==================================================
-# ERINNERUNG SPEICHERN
-# ==================================================
+    except Exception as e:
 
-def save_memory(child_code, title, text):
-    conn = get_connection()
-    cursor = conn.cursor()
+        st.error(
+            "Die Datenbank konnte nicht geladen werden."
+        )
 
-    cursor.execute(
-        """
-        INSERT INTO memories
-        (child_code, title, text)
-        VALUES (?, ?, ?)
-        """,
-        (child_code, title, text)
-    )
+        st.caption(str(e))
 
-    conn.commit()
-    conn.close()
-
-
-# ==================================================
-# ERINNERUNGEN LADEN
-# ==================================================
-
-def load_memories(child_code):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        SELECT id, title, text, created_at
-        FROM memories
-        WHERE child_code = ?
-        ORDER BY created_at DESC
-        """,
-        (child_code,)
-    )
-
-    memories = cursor.fetchall()
-
-    conn.close()
-
-    return memories
+        return pd.DataFrame(
+            columns=[
+                "browser_id",
+                "title",
+                "memory",
+                "created_at"
+            ]
+        )
 
 
-# ==================================================
-# FARBEN
-# ==================================================
+# ============================================================
+# DATEN SPEICHERN
+# ============================================================
 
-COLORS = {
-    "purple": "#9b59b6",
-    "blue": "#3498db",
-    "green": "#2ecc71",
-    "orange": "#e67e22",
-    "red": "#e74c3c",
-    "pink": "#e91e63"
+def save_memory(title, memory):
+
+    try:
+
+        df = conn.read(
+            worksheet="Sheet1",
+            ttl=0
+        )
+
+        if df is None or df.empty:
+
+            df = pd.DataFrame(
+                columns=[
+                    "browser_id",
+                    "title",
+                    "memory",
+                    "created_at"
+                ]
+            )
+
+        df = df.fillna("")
+
+        new_memory = pd.DataFrame(
+            [{
+                "browser_id": browser_id,
+                "title": title,
+                "memory": memory,
+                "created_at": datetime.datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+            }]
+        )
+
+        df = pd.concat(
+            [df, new_memory],
+            ignore_index=True
+        )
+
+        conn.update(
+            worksheet="Sheet1",
+            data=df
+        )
+
+        st.cache_data.clear()
+
+        return True
+
+    except Exception as e:
+
+        st.error(
+            "Die Erinnerung konnte nicht gespeichert werden."
+        )
+
+        st.caption(str(e))
+
+        return False
+
+
+# ============================================================
+# DESIGN
+# ============================================================
+
+colors = {
+
+    "purple": "#7B61FF",
+    "blue": "#4A90E2",
+    "green": "#43A047",
+    "orange": "#F39C12",
+    "red": "#E85D5D"
+
 }
 
-COLOR = COLORS.get(
+main_color = colors.get(
     MY_COLOR,
-    "#9b59b6"
+    "#7B61FF"
 )
 
-
-# ==================================================
-# DESIGN
-# ==================================================
 
 st.markdown(
     f"""
@@ -140,29 +224,52 @@ st.markdown(
         background-color: #fff8e8;
     }}
 
-    .title {{
+    .main-title {{
         text-align: center;
-        font-size: 42px;
-        font-weight: bold;
+        font-size: 3.2rem;
+        font-weight: 700;
+        color: {main_color};
+        margin-top: 20px;
+        margin-bottom: 5px;
     }}
 
     .subtitle {{
         text-align: center;
-        font-size: 20px;
-        color: #6f6256;
+        font-size: 1.2rem;
+        color: #555;
+        margin-bottom: 30px;
     }}
 
-    .light {{
-        text-align: center;
-        font-size: 75px;
-    }}
-
-    .memory {{
-        background-color: #fffdf5;
-        border: 3px solid {COLOR};
+    .memory-card {{
+        background: white;
+        padding: 25px;
         border-radius: 20px;
+        border: 2px solid #eee;
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }}
+
+    .memory-title {{
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: {main_color};
+        margin-bottom: 10px;
+    }}
+
+    .memory-text {{
+        font-size: 1.15rem;
+        line-height: 1.6;
+        color: #333;
+    }}
+
+    .question-card {{
+        background: #fff;
         padding: 20px;
-        margin-top: 15px;
+        border-radius: 18px;
+        text-align: center;
+        font-size: 1.2rem;
+        border: 2px solid #eee;
+        margin-top: 20px;
     }}
 
     </style>
@@ -171,182 +278,165 @@ st.markdown(
 )
 
 
-# ==================================================
-# START
-# ==================================================
+# ============================================================
+# TITEL
+# ============================================================
 
 st.markdown(
-    '<div class="light">💡</div>',
+    f"""
+    <div class="main-title">
+        💡 {APP_NAME}
+    </div>
+    """,
     unsafe_allow_html=True
 )
 
 st.markdown(
-    f'<div class="title">{html.escape(APP_NAME)}</div>',
+    f"""
+    <div class="subtitle">
+        {MY_MESSAGE}
+    </div>
+    """,
     unsafe_allow_html=True
 )
 
-st.markdown(
-    f'<div class="subtitle">{html.escape(MY_MESSAGE)}</div>',
-    unsafe_allow_html=True
-)
 
-st.write("")
-
-
-# ==================================================
-# KIND AUSWÄHLEN
-# ==================================================
-
-st.header("👋 Wer bist du?")
-
-child_code = st.selectbox(
-    "Wähle deinen Code:",
-    [
-        "K01",
-        "K02",
-        "K03",
-        "K04",
-        "K05",
-        "K06",
-        "K07",
-        "K08",
-        "K09",
-        "K10",
-        "K11",
-        "K12"
-    ]
-)
-
-
-# ==================================================
+# ============================================================
 # ERINNERUNG SPEICHERN
-# ==================================================
+# ============================================================
 
-st.header("💛 Eine schöne Erinnerung")
+st.markdown("### 🌱 Einen schönen Moment speichern")
 
 title = st.text_input(
-    "Was war schön?",
-    placeholder="Zum Beispiel: Mein Geburtstag"
+    "Was möchtest du speichern?",
+    placeholder="Zum Beispiel: Mein Ausflug"
 )
 
-text = st.text_area(
-    "Erzähl mir davon …",
-    placeholder="Warum war dieser Moment schön?"
+memory = st.text_area(
+    "Erzähl ein bisschen davon:",
+    placeholder="Was war schön? Wer war dabei? Was möchtest du später erinnern?"
 )
 
 
 if st.button(
-    "💛 Erinnerung speichern",
+    "💾 Erinnerung speichern",
     use_container_width=True
 ):
 
-    if title.strip() and text.strip():
-
-        save_memory(
-            child_code,
-            title.strip(),
-            text.strip()
-        )
-
-        st.success(
-            "💛 Deine Erinnerung wurde gespeichert!"
-        )
-
-        st.rerun()
-
-    else:
+    if not title.strip():
 
         st.warning(
-            "Bitte fülle beide Felder aus."
+            "Gib deiner Erinnerung zuerst einen Titel."
         )
 
+    elif not memory.strip():
 
-# ==================================================
-# DAS LEBEN RUFT
-# ==================================================
-
-st.divider()
-
-st.header("🌿 Das Leben ruft")
-
-if st.button(
-    "✨ Das Leben ruft",
-    use_container_width=True
-):
-
-    memories = load_memories(child_code)
-
-    if memories:
-
-        memory = random.choice(memories)
-
-        memory_title = html.escape(memory[1])
-        memory_text = html.escape(memory[2])
-
-        st.markdown(
-            f"""
-            <div class="memory">
-
-            <h2>❤️ Erinnerst du dich?</h2>
-
-            <h3>{memory_title}</h3>
-
-            <p>{memory_text}</p>
-
-            <h3>🌿 Das Leben ruft dir zu:</h3>
-
-            <p>{html.escape(MY_MESSAGE)}</p>
-
-            <h3>❓ {html.escape(MY_QUESTION)}</h3>
-
-            <div class="light">
-            ✨💡✨
-            </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True
+        st.warning(
+            "Schreib noch kurz auf, was passiert ist."
         )
 
     else:
 
-        st.info(
-            "🌱 Du hast noch keine Erinnerung gespeichert."
+        success = save_memory(
+            title.strip(),
+            memory.strip()
         )
 
+        if success:
 
-# ==================================================
-# MEINE ERINNERUNGEN
-# ==================================================
+            st.success(
+                "✨ Deine Erinnerung wurde gespeichert!"
+            )
 
-st.divider()
+            st.rerun()
 
-st.header("📖 Meine Erinnerungen")
 
-memories = load_memories(child_code)
+# ============================================================
+# ERINNERUNG ZUFÄLLIG AUFRUFEN
+# ============================================================
 
-if memories:
+st.markdown("---")
 
-    for memory in memories:
+st.markdown("### 🔔 Dein Lichtblick")
 
-        memory_title = html.escape(memory[1])
-        memory_text = html.escape(memory[2])
+
+if st.button(
+    "💡 Erinnere mich an etwas Schönes",
+    use_container_width=True
+):
+
+    memories = load_memories()
+
+    if memories.empty:
+
+        st.info(
+            "Du hast noch keine Erinnerung gespeichert."
+        )
+
+    else:
+
+        row = memories.sample(1).iloc[0]
 
         st.markdown(
             f"""
-            <div class="memory">
+            <div class="memory-card">
 
-            <h3>💛 {memory_title}</h3>
+                <div class="memory-title">
+                    ✨ {row["title"]}
+                </div>
 
-            <p>{memory_text}</p>
+                <div class="memory-text">
+                    {row["memory"]}
+                </div>
 
             </div>
             """,
             unsafe_allow_html=True
         )
 
-else:
+        st.markdown(
+            f"""
+            <div class="question-card">
+                💭 {MY_QUESTION}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    st.write(
-        "Noch keine Erinnerungen. 🌱"
-    )
+
+# ============================================================
+# EIGENE ERINNERUNGEN ANZEIGEN
+# ============================================================
+
+st.markdown("---")
+
+with st.expander("🌟 Meine gespeicherten Erinnerungen"):
+
+    memories = load_memories()
+
+    if memories.empty:
+
+        st.write(
+            "Hier erscheinen deine Erinnerungen."
+        )
+
+    else:
+
+        for _, row in memories.iloc[::-1].iterrows():
+
+            st.markdown(
+                f"""
+                <div class="memory-card">
+
+                    <div class="memory-title">
+                        {row["title"]}
+                    </div>
+
+                    <div class="memory-text">
+                        {row["memory"]}
+                    </div>
+
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
