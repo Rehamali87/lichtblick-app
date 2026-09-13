@@ -25,7 +25,7 @@ with open("text.txt") as wf:
     wf.write("Hello world")
 
 import os
-os.system('ls')
+os.system('ls') 
 
 COLORS = {
     "purple": "#9b59b6", "blue": "#3498db", "green": "#2ecc71",
