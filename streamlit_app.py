@@ -1,4 +1,5 @@
 import random
+import time
 from uuid import uuid4
 
 import streamlit as st
@@ -23,10 +24,20 @@ MY_QUESTION = "Was Schönes könnte heute passieren?"
 st.set_page_config(page_title=APP_NAME, page_icon="💡", layout="centered")
 
 cookie_controller = CookieController()
-user_key = cookie_controller.get("user_key")
+user_key = st.session_state.get("user_key")
+
+for _ in range(10):
+    cookie_controller.refresh()
+    user_key = cookie_controller.get("user_key") or user_key
+    if user_key:
+        break
+    time.sleep(0.1)
+
 if not user_key:
     user_key = str(uuid4())
-    cookie_controller.set("user_key", user_key, max_age=60 * 60 * 24 * 365)
+
+st.session_state["user_key"] = user_key
+cookie_controller.set("user_key", user_key, max_age=60 * 60 * 24 * 365)
 
 COLORS = {
     "purple": "#9b59b6", "blue": "#3498db", "green": "#2ecc71",
