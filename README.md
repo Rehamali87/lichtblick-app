@@ -12,6 +12,7 @@ Prerequisite: install `uv` if you don't already have it.
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
+
 1. Sync the dependencies
 
    ```

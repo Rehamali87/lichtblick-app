@@ -1,2 +1,4 @@
 streamlit
-streamlit-local-storage
+pysqlite3
+SQLAlchemy
+streamlit-cookies-controller
