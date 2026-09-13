@@ -1,10 +1,10 @@
-
-
-
-
+import random
+from uuid import uuid4
 
 import streamlit as st
-import random
+from streamlit_cookies_controller import CookieController
+
+from db import add_memory, get_memories
 
 # ==================================================
 # 🌟 MEIN LICHTBLICK – HIER PROGRAMMIERE ICH!
@@ -21,6 +21,12 @@ MY_QUESTION = "Was Schönes könnte heute passieren?"
 # ==================================================
 
 st.set_page_config(page_title=APP_NAME, page_icon="💡", layout="centered")
+
+cookie_controller = CookieController()
+user_key = cookie_controller.get("user_key")
+if not user_key:
+    user_key = str(uuid4())
+    cookie_controller.set("user_key", user_key, max_age=60 * 60 * 24 * 365)
 
 COLORS = {
     "purple": "#9b59b6", "blue": "#3498db", "green": "#2ecc71",
@@ -43,8 +49,7 @@ st.markdown(f'<div class="main-title">{APP_NAME} …</div>', unsafe_allow_html=T
 st.markdown(f'<div class="subtitle">{MY_MESSAGE}</div>', unsafe_allow_html=True)
 st.write("")
 
-if "memories" not in st.session_state:
-    st.session_state.memories = []
+memories = get_memories(user_key)
 
 st.header("💛 Eine schöne Erinnerung")
 title = st.text_input("Was war schön?", placeholder="Zum Beispiel: Mein Geburtstag")
@@ -52,11 +57,13 @@ text = st.text_area("Erzähl mir davon …", placeholder="Warum war dieser Momen
 
 if st.button("💛 Erinnerung speichern"):
     if title or text:
-        st.session_state.memories.append({
-            "title": title if title else "Ein schöner Moment",
-            "text": text if text else "💛"
-        })
+        add_memory(
+            user_key=user_key,
+            title=title if title else "Ein schöner Moment",
+            details=text if text else "💛",
+        )
         st.success("Deine Erinnerung wurde gespeichert. 💛")
+        st.rerun()
     else:
         st.warning("Schreibe zuerst eine schöne Erinnerung.")
 
@@ -64,13 +71,13 @@ st.divider()
 st.header("🌿 Das Leben ruft")
 
 if st.button("✨ Das Leben ruft", use_container_width=True):
-    if st.session_state.memories:
-        memory = random.choice(st.session_state.memories)
+    if memories:
+        memory = random.choice(memories)
         st.markdown(f"""
         <div class="memory">
         <h2>❤️ {MY_QUESTION}</h2>
-        <h3>{memory["title"]}</h3>
-        <p>{memory["text"]}</p>
+        <h3>{memory.title}</h3>
+        <p>{memory.details}</p>
         <h3>🌿 Das Leben ruft dir zu:</h3>
         <p>{MY_MESSAGE}</p>
         <div class="light">✨💡✨</div>
@@ -82,12 +89,12 @@ if st.button("✨ Das Leben ruft", use_container_width=True):
 st.divider()
 st.header("📖 Meine Erinnerungen")
 
-if st.session_state.memories:
-    for memory in st.session_state.memories:
+if memories:
+    for memory in memories:
         st.markdown(f"""
         <div class="memory">
-        <h3>💛 {memory["title"]}</h3>
-        <p>{memory["text"]}</p>
+        <h3>💛 {memory.title}</h3>
+        <p>{memory.details}</p>
         </div>
         """, unsafe_allow_html=True)
 else:
