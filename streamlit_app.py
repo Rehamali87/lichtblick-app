@@ -1,43 +1,25 @@
 import streamlit as st
+import requests
 import random
 import html
-from supabase import create_client, Client
 
 
 # ==================================================
-# 🌟 MEIN LICHTBLICK – HIER PROGRAMMIERE ICH!
+# 🌟 HIER KANNST DU PROGRAMMIEREN
 # ==================================================
 
-# 🟢 ÄNDERE NUR DIE STELLEN IN DIESEM BEREICH!
-
-
-# ✏️ 1. DEIN APP-NAME
 APP_NAME = "Lichtblick"
-
-
-# 🎨 2. DEINE FARBE
-# Probiere:
-# "purple", "blue", "green", "orange", "red", "pink"
 
 MY_COLOR = "purple"
 
-
-# 💬 3. DEINE SCHÖNE NACHRICHT
 MY_MESSAGE = "Das Leben hat schöne Momente."
 
-
-# ❓ 4. DEINE EIGENE FRAGE
 MY_QUESTION = "Was Schönes könnte heute passieren?"
 
 
 # ==================================================
-# 🔴 AB HIER NICHT ÄNDERN!
+# 🔴 AB HIER NICHT ÄNDERN
 # ==================================================
-
-
-# --------------------------------
-# APP EINSTELLUNGEN
-# --------------------------------
 
 st.set_page_config(
     page_title=APP_NAME,
@@ -46,31 +28,17 @@ st.set_page_config(
 )
 
 
-# --------------------------------
-# SUPABASE VERBINDUNG
-# --------------------------------
+# ==================================================
+# SUPABASE
+# ==================================================
 
-@st.cache_resource
-def get_supabase() -> Client:
-    return create_client(
-        st.secrets["SUPABASE_URL"],
-        st.secrets["SUPABASE_PUBLISHABLE_KEY"]
-    )
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_PUBLISHABLE_KEY"]
 
 
-try:
-    supabase = get_supabase()
-except Exception:
-    st.error(
-        "⚠️ Die Datenbank ist noch nicht verbunden.\n\n"
-        "Bitte überprüfe die Supabase-Einstellungen."
-    )
-    st.stop()
-
-
-# --------------------------------
-# DESIGN
-# --------------------------------
+# ==================================================
+# FARBEN
+# ==================================================
 
 COLORS = {
     "purple": "#9b59b6",
@@ -81,21 +49,22 @@ COLORS = {
     "pink": "#e91e63"
 }
 
-selected_color = COLORS.get(
-    MY_COLOR,
-    "#9b59b6"
-)
+COLOR = COLORS.get(MY_COLOR, "#9b59b6")
 
+
+# ==================================================
+# DESIGN
+# ==================================================
 
 st.markdown(
     f"""
     <style>
 
-    body {{
+    .main {{
         background-color: #fff8e8;
     }}
 
-    .main-title {{
+    .title {{
         text-align: center;
         font-size: 42px;
         font-weight: bold;
@@ -109,15 +78,15 @@ st.markdown(
 
     .light {{
         text-align: center;
-        font-size: 80px;
+        font-size: 75px;
     }}
 
     .memory {{
         background-color: #fff8e8;
-        padding: 20px;
+        border: 3px solid {COLOR};
         border-radius: 20px;
+        padding: 20px;
         margin-top: 15px;
-        border: 3px solid {selected_color};
     }}
 
     </style>
@@ -126,9 +95,75 @@ st.markdown(
 )
 
 
-# --------------------------------
-# KIND AUSWÄHLEN
-# --------------------------------
+# ==================================================
+# FUNKTION: DATENBANK ANSPRECHEN
+# ==================================================
+
+def supabase_request(method, table, params=None, data=None):
+
+    url = f"{SUPABASE_URL}/rest/v1/{table}"
+
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.request(
+        method=method,
+        url=url,
+        headers=headers,
+        params=params,
+        json=data,
+        timeout=10
+    )
+
+    if response.status_code >= 400:
+        raise Exception(response.text)
+
+    if response.text:
+        return response.json()
+
+    return []
+
+
+# ==================================================
+# ERINNERUNGEN LADEN
+# ==================================================
+
+def load_memories(child_code):
+
+    return supabase_request(
+        "GET",
+        "memories",
+        params={
+            "select": "id,child_code,title,text,created_at",
+            "child_code": f"eq.{child_code}",
+            "order": "created_at.desc"
+        }
+    )
+
+
+# ==================================================
+# ERINNERUNG SPEICHERN
+# ==================================================
+
+def save_memory(child_code, title, text):
+
+    return supabase_request(
+        "POST",
+        "memories",
+        data={
+            "child_code": child_code,
+            "title": title,
+            "text": text
+        }
+    )
+
+
+# ==================================================
+# APP
+# ==================================================
 
 st.markdown(
     '<div class="light">💡</div>',
@@ -136,7 +171,7 @@ st.markdown(
 )
 
 st.markdown(
-    f'<div class="main-title">{html.escape(APP_NAME)} …</div>',
+    f'<div class="title">{html.escape(APP_NAME)} …</div>',
     unsafe_allow_html=True
 )
 
@@ -145,11 +180,12 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.write("")
 
+# ==================================================
+# KIND
+# ==================================================
 
 st.header("👋 Wer bist du?")
-
 
 child_code = st.selectbox(
     "Wähle deinen Code:",
@@ -170,39 +206,16 @@ child_code = st.selectbox(
 )
 
 
-# --------------------------------
-# ERINNERUNGEN AUS DATENBANK LADEN
-# --------------------------------
-
-def load_memories(child_code):
-
-    response = (
-        supabase
-        .table("memories")
-        .select("id, title, text, created_at")
-        .eq("child_code", child_code)
-        .order("created_at", desc=True)
-        .execute()
-    )
-
-    return response.data or []
-
-
-memories = load_memories(child_code)
-
-
-# --------------------------------
-# ERINNERUNG SPEICHERN
-# --------------------------------
+# ==================================================
+# SCHÖNE ERINNERUNG
+# ==================================================
 
 st.header("💛 Eine schöne Erinnerung")
-
 
 title = st.text_input(
     "Was war schön?",
     placeholder="Zum Beispiel: Mein Geburtstag"
 )
-
 
 text = st.text_area(
     "Erzähl mir davon …",
@@ -215,44 +228,36 @@ if st.button(
     use_container_width=True
 ):
 
-    if title.strip() or text.strip():
-
-        try:
-
-            supabase.table("memories").insert(
-                {
-                    "child_code": child_code,
-                    "title": title.strip()
-                    if title.strip()
-                    else "Ein schöner Moment",
-                    "text": text.strip()
-                    if text.strip()
-                    else "💛"
-                }
-            ).execute()
-
-            st.success(
-                "Deine Erinnerung wurde dauerhaft gespeichert. 💛"
-            )
-
-            st.rerun()
-
-        except Exception as e:
-
-            st.error(
-                "Die Erinnerung konnte nicht gespeichert werden."
-            )
-
-    else:
+    if not title.strip() and not text.strip():
 
         st.warning(
             "Schreibe zuerst eine schöne Erinnerung."
         )
 
+    else:
 
-# --------------------------------
+        try:
+
+            save_memory(
+                child_code,
+                title.strip() or "Ein schöner Moment",
+                text.strip() or "💛"
+            )
+
+            st.success(
+                "💛 Deine Erinnerung wurde gespeichert!"
+            )
+
+        except Exception as error:
+
+            st.error(
+                "Die Erinnerung konnte nicht gespeichert werden."
+            )
+
+
+# ==================================================
 # DAS LEBEN RUFT
-# --------------------------------
+# ==================================================
 
 st.divider()
 
@@ -264,110 +269,104 @@ if st.button(
     use_container_width=True
 ):
 
-    # Datenbank neu laden
-    memories = load_memories(child_code)
+    try:
 
-    if memories:
+        memories = load_memories(child_code)
 
-        memory = random.choice(memories)
+        if memories:
 
-        memory_title = html.escape(
-            memory.get("title", "")
-        )
+            memory = random.choice(memories)
 
-        memory_text = html.escape(
-            memory.get("text", "")
-        )
+            st.markdown(
+                f"""
+                <div class="memory">
 
-        message = html.escape(
-            MY_MESSAGE
-        )
+                <h2>❤️ Erinnerst du dich?</h2>
 
-        question = html.escape(
-            MY_QUESTION
-        )
+                <h3>
+                {html.escape(memory["title"])}
+                </h3>
 
-        st.markdown(
-            f"""
-            <div class="memory">
+                <p>
+                {html.escape(memory["text"])}
+                </p>
 
-            <h2>❤️ Erinnerst du dich?</h2>
+                <h3>
+                🌿 Das Leben ruft dir zu:
+                </h3>
 
-            <h3>{memory_title}</h3>
+                <p>
+                {html.escape(MY_MESSAGE)}
+                </p>
 
-            <p>{memory_text}</p>
+                <h3>
+                ❓ {html.escape(MY_QUESTION)}
+                </h3>
 
-            <h3>
-            🌿 Das Leben ruft dir zu:
-            </h3>
+                <div class="light">
+                ✨💡✨
+                </div>
 
-            <p>
-            {message}
-            </p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-            <h3>
-            ❓ {question}
-            </h3>
+        else:
 
-            <div class="light">
-            ✨💡✨
-            </div>
+            st.info(
+                "🌱 Du hast noch keine Erinnerung gespeichert."
+            )
 
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    except Exception:
 
-    else:
-
-        st.info(
-            "🌱 Speichere zuerst eine schöne Erinnerung."
+        st.error(
+            "Die Erinnerungen konnten nicht geladen werden."
         )
 
 
-# --------------------------------
-# ALLE ERINNERUNGEN
-# --------------------------------
+# ==================================================
+# MEINE ERINNERUNGEN
+# ==================================================
 
 st.divider()
 
 st.header("📖 Meine Erinnerungen")
 
 
-memories = load_memories(child_code)
+try:
 
+    memories = load_memories(child_code)
 
-if memories:
+    if memories:
 
-    for memory in memories:
+        for memory in memories:
 
-        memory_title = html.escape(
-            memory.get("title", "")
+            st.markdown(
+                f"""
+                <div class="memory">
+
+                <h3>
+                💛 {html.escape(memory["title"])}
+                </h3>
+
+                <p>
+                {html.escape(memory["text"])}
+                </p>
+
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+    else:
+
+        st.write(
+            "Noch keine Erinnerungen. 🌱"
         )
 
-        memory_text = html.escape(
-            memory.get("text", "")
-        )
+except Exception:
 
-        st.markdown(
-            f"""
-            <div class="memory">
-
-            <h3>
-            💛 {memory_title}
-            </h3>
-
-            <p>
-            {memory_text}
-            </p>
-
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-else:
-
-    st.write(
-        "Noch keine Erinnerungen. 🌱"
+    st.error(
+        "Die Erinnerungen konnten nicht geladen werden."
     )
