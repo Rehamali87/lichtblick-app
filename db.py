@@ -10,7 +10,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sess
 DATABASE_PATH = Path(__file__).with_name("lichtblick.db")
 DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
-
 class Base(DeclarativeBase):
 	pass
 
