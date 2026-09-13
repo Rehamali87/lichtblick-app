@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import sqlite3
 import random
@@ -6,7 +5,7 @@ import html
 
 
 # ==================================================
-# 🌟 HIER KÖNNEN DIE KINDER PROGRAMMIEREN
+# 🌟 HIER KANNST DU DEINE APP ÄNDERN
 # ==================================================
 
 APP_NAME = "Lichtblick"
@@ -44,9 +43,7 @@ def get_connection():
 
 
 def create_database():
-
     conn = get_connection()
-
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -71,9 +68,7 @@ create_database()
 # ==================================================
 
 def save_memory(child_code, title, text):
-
     conn = get_connection()
-
     cursor = conn.cursor()
 
     cursor.execute(
@@ -82,11 +77,7 @@ def save_memory(child_code, title, text):
         (child_code, title, text)
         VALUES (?, ?, ?)
         """,
-        (
-            child_code,
-            title,
-            text
-        )
+        (child_code, title, text)
     )
 
     conn.commit()
@@ -98,9 +89,7 @@ def save_memory(child_code, title, text):
 # ==================================================
 
 def load_memories(child_code):
-
     conn = get_connection()
-
     cursor = conn.cursor()
 
     cursor.execute(
@@ -147,7 +136,7 @@ st.markdown(
     f"""
     <style>
 
-    .main {{
+    .stApp {{
         background-color: #fff8e8;
     }}
 
@@ -169,7 +158,7 @@ st.markdown(
     }}
 
     .memory {{
-        background-color: #fff8e8;
+        background-color: #fffdf5;
         border: 3px solid {COLOR};
         border-radius: 20px;
         padding: 20px;
@@ -192,7 +181,7 @@ st.markdown(
 )
 
 st.markdown(
-    f'<div class="title">{html.escape(APP_NAME)} …</div>',
+    f'<div class="title">{html.escape(APP_NAME)}</div>',
     unsafe_allow_html=True
 )
 
@@ -200,6 +189,8 @@ st.markdown(
     f'<div class="subtitle">{html.escape(MY_MESSAGE)}</div>',
     unsafe_allow_html=True
 )
+
+st.write("")
 
 
 # ==================================================
@@ -228,7 +219,7 @@ child_code = st.selectbox(
 
 
 # ==================================================
-# ERINNERUNG ERSTELLEN
+# ERINNERUNG SPEICHERN
 # ==================================================
 
 st.header("💛 Eine schöne Erinnerung")
@@ -261,6 +252,8 @@ if st.button(
             "💛 Deine Erinnerung wurde gespeichert!"
         )
 
+        st.rerun()
+
     else:
 
         st.warning(
@@ -287,13 +280,8 @@ if st.button(
 
         memory = random.choice(memories)
 
-        memory_title = html.escape(
-            memory[1]
-        )
-
-        memory_text = html.escape(
-            memory[2]
-        )
+        memory_title = html.escape(memory[1])
+        memory_text = html.escape(memory[2])
 
         st.markdown(
             f"""
@@ -305,17 +293,11 @@ if st.button(
 
             <p>{memory_text}</p>
 
-            <h3>
-            🌿 Das Leben ruft dir zu:
-            </h3>
+            <h3>🌿 Das Leben ruft dir zu:</h3>
 
-            <p>
-            {html.escape(MY_MESSAGE)}
-            </p>
+            <p>{html.escape(MY_MESSAGE)}</p>
 
-            <h3>
-            ❓ {html.escape(MY_QUESTION)}
-            </h3>
+            <h3>❓ {html.escape(MY_QUESTION)}</h3>
 
             <div class="light">
             ✨💡✨
@@ -347,25 +329,16 @@ if memories:
 
     for memory in memories:
 
-        memory_title = html.escape(
-            memory[1]
-        )
-
-        memory_text = html.escape(
-            memory[2]
-        )
+        memory_title = html.escape(memory[1])
+        memory_text = html.escape(memory[2])
 
         st.markdown(
             f"""
             <div class="memory">
 
-            <h3>
-            💛 {memory_title}
-            </h3>
+            <h3>💛 {memory_title}</h3>
 
-            <p>
-            {memory_text}
-            </p>
+            <p>{memory_text}</p>
 
             </div>
             """,
@@ -377,4 +350,3 @@ else:
     st.write(
         "Noch keine Erinnerungen. 🌱"
     )
-```
