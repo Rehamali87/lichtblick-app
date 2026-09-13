@@ -1,15 +1,11 @@
 import streamlit as st
-import pandas as pd
 import random
-import uuid
-import datetime
-import extra_streamlit_components as stx
-
-from streamlit_gsheets import GSheetsConnection
+import json
+from streamlit_local_storage import LocalStorage
 
 
 # ============================================================
-# KINDER-BEREICH – HIER KÖNNEN DIE KINDER IHRE APP ANPASSEN
+# EINSTELLUNGEN
 # ============================================================
 
 APP_NAME = "Lichtblick"
@@ -33,181 +29,67 @@ st.set_page_config(
 
 
 # ============================================================
-# COOKIE MANAGER
+# LOCAL STORAGE
 # ============================================================
 
 @st.cache_resource
-def get_cookie_manager():
-    return stx.CookieManager()
+def get_local_storage():
+    return LocalStorage()
 
 
-cookie_manager = get_cookie_manager()
+localS = get_local_storage()
 
-COOKIE_NAME = "lichtblick_browser_id"
-
-browser_id = cookie_manager.get(COOKIE_NAME)
-
-
-# ------------------------------------------------------------
-# Wenn dieser Browser noch keine ID hat:
-# neue zufällige ID erzeugen
-# ------------------------------------------------------------
-
-if not browser_id:
-
-    browser_id = str(uuid.uuid4())
-
-    cookie_manager.set(
-        COOKIE_NAME,
-        browser_id,
-        expires_at=datetime.datetime.now()
-        + datetime.timedelta(days=3650)
-    )
-
-    st.session_state["new_browser"] = True
-
-    st.rerun()
+STORAGE_KEY = "lichtblick_memories"
 
 
 # ============================================================
-# GOOGLE SHEETS
-# ============================================================
-
-@st.cache_resource
-def get_connection():
-    return st.connection(
-        "gsheets",
-        type=GSheetsConnection
-    )
-
-
-conn = get_connection()
-
-
-# ============================================================
-# DATEN LADEN
+# ERINNERUNGEN LADEN
 # ============================================================
 
 def load_memories():
 
     try:
+        data = localS.getItem(STORAGE_KEY)
 
-        df = conn.read(
-            worksheet="Sheet1",
-            ttl=0
-        )
+        if not data:
+            return []
 
-        if df is None or df.empty:
-            return pd.DataFrame(
-                columns=[
-                    "browser_id",
-                    "title",
-                    "memory",
-                    "created_at"
-                ]
-            )
+        if isinstance(data, list):
+            return data
 
-        df = df.fillna("")
+        return json.loads(data)
 
-        # Nur Erinnerungen dieses Browsers
-        own_memories = df[
-            df["browser_id"].astype(str) == str(browser_id)
-        ]
-
-        return own_memories
-
-    except Exception as e:
-
-        st.error(
-            "Die Datenbank konnte nicht geladen werden."
-        )
-
-        st.caption(str(e))
-
-        return pd.DataFrame(
-            columns=[
-                "browser_id",
-                "title",
-                "memory",
-                "created_at"
-            ]
-        )
+    except Exception:
+        return []
 
 
 # ============================================================
-# DATEN SPEICHERN
+# ERINNERUNGEN SPEICHERN
 # ============================================================
 
-def save_memory(title, memory):
+def save_memories(memories):
 
-    try:
+    data = json.dumps(
+        memories,
+        ensure_ascii=False
+    )
 
-        df = conn.read(
-            worksheet="Sheet1",
-            ttl=0
-        )
-
-        if df is None or df.empty:
-
-            df = pd.DataFrame(
-                columns=[
-                    "browser_id",
-                    "title",
-                    "memory",
-                    "created_at"
-                ]
-            )
-
-        df = df.fillna("")
-
-        new_memory = pd.DataFrame(
-            [{
-                "browser_id": browser_id,
-                "title": title,
-                "memory": memory,
-                "created_at": datetime.datetime.now().strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-            }]
-        )
-
-        df = pd.concat(
-            [df, new_memory],
-            ignore_index=True
-        )
-
-        conn.update(
-            worksheet="Sheet1",
-            data=df
-        )
-
-        st.cache_data.clear()
-
-        return True
-
-    except Exception as e:
-
-        st.error(
-            "Die Erinnerung konnte nicht gespeichert werden."
-        )
-
-        st.caption(str(e))
-
-        return False
+    localS.setItem(
+        STORAGE_KEY,
+        data
+    )
 
 
 # ============================================================
-# DESIGN
+# FARBE
 # ============================================================
 
 colors = {
-
     "purple": "#7B61FF",
     "blue": "#4A90E2",
     "green": "#43A047",
     "orange": "#F39C12",
     "red": "#E85D5D"
-
 }
 
 main_color = colors.get(
@@ -215,6 +97,10 @@ main_color = colors.get(
     "#7B61FF"
 )
 
+
+# ============================================================
+# DESIGN
+# ============================================================
 
 st.markdown(
     f"""
@@ -226,11 +112,10 @@ st.markdown(
 
     .main-title {{
         text-align: center;
-        font-size: 3.2rem;
-        font-weight: 700;
+        font-size: 3rem;
+        font-weight: bold;
         color: {main_color};
         margin-top: 20px;
-        margin-bottom: 5px;
     }}
 
     .subtitle {{
@@ -244,31 +129,31 @@ st.markdown(
         background: white;
         padding: 25px;
         border-radius: 20px;
-        border: 2px solid #eee;
+        border: 2px solid #eeeeee;
         margin-top: 20px;
         margin-bottom: 20px;
     }}
 
     .memory-title {{
         font-size: 1.4rem;
-        font-weight: 700;
+        font-weight: bold;
         color: {main_color};
         margin-bottom: 10px;
     }}
 
     .memory-text {{
-        font-size: 1.15rem;
+        font-size: 1.1rem;
         line-height: 1.6;
         color: #333;
     }}
 
     .question-card {{
-        background: #fff;
+        background: white;
         padding: 20px;
         border-radius: 18px;
         text-align: center;
         font-size: 1.2rem;
-        border: 2px solid #eee;
+        border: 2px solid #eeeeee;
         margin-top: 20px;
     }}
 
@@ -302,19 +187,19 @@ st.markdown(
 
 
 # ============================================================
-# ERINNERUNG SPEICHERN
+# NEUE ERINNERUNG
 # ============================================================
 
 st.markdown("### 🌱 Einen schönen Moment speichern")
 
 title = st.text_input(
-    "Was möchtest du speichern?",
+    "Titel deiner Erinnerung",
     placeholder="Zum Beispiel: Mein Ausflug"
 )
 
 memory = st.text_area(
-    "Erzähl ein bisschen davon:",
-    placeholder="Was war schön? Wer war dabei? Was möchtest du später erinnern?"
+    "Was möchtest du später erinnern?",
+    placeholder="Schreib hier deinen schönen Moment..."
 )
 
 
@@ -323,42 +208,45 @@ if st.button(
     use_container_width=True
 ):
 
-    if not title.strip():
+    if title.strip() == "":
 
         st.warning(
-            "Gib deiner Erinnerung zuerst einen Titel."
+            "Bitte gib deiner Erinnerung einen Titel."
         )
 
-    elif not memory.strip():
+    elif memory.strip() == "":
 
         st.warning(
-            "Schreib noch kurz auf, was passiert ist."
+            "Bitte schreibe etwas über deinen Moment."
         )
 
     else:
 
-        success = save_memory(
-            title.strip(),
-            memory.strip()
+        memories = load_memories()
+
+        memories.append(
+            {
+                "title": title.strip(),
+                "memory": memory.strip()
+            }
         )
 
-        if success:
+        save_memories(memories)
 
-            st.success(
-                "✨ Deine Erinnerung wurde gespeichert!"
-            )
+        st.success(
+            "✨ Deine Erinnerung wurde gespeichert!"
+        )
 
-            st.rerun()
+        st.rerun()
 
 
 # ============================================================
-# ERINNERUNG ZUFÄLLIG AUFRUFEN
+# LICHTBLICK
 # ============================================================
 
 st.markdown("---")
 
 st.markdown("### 🔔 Dein Lichtblick")
-
 
 if st.button(
     "💡 Erinnere mich an etwas Schönes",
@@ -367,7 +255,7 @@ if st.button(
 
     memories = load_memories()
 
-    if memories.empty:
+    if len(memories) == 0:
 
         st.info(
             "Du hast noch keine Erinnerung gespeichert."
@@ -375,18 +263,18 @@ if st.button(
 
     else:
 
-        row = memories.sample(1).iloc[0]
+        chosen = random.choice(memories)
 
         st.markdown(
             f"""
             <div class="memory-card">
 
                 <div class="memory-title">
-                    ✨ {row["title"]}
+                    ✨ {chosen["title"]}
                 </div>
 
                 <div class="memory-text">
-                    {row["memory"]}
+                    {chosen["memory"]}
                 </div>
 
             </div>
@@ -405,38 +293,49 @@ if st.button(
 
 
 # ============================================================
-# EIGENE ERINNERUNGEN ANZEIGEN
+# MEINE ERINNERUNGEN
 # ============================================================
 
 st.markdown("---")
 
-with st.expander("🌟 Meine gespeicherten Erinnerungen"):
+with st.expander("🌟 Meine Erinnerungen"):
 
     memories = load_memories()
 
-    if memories.empty:
+    if len(memories) == 0:
 
         st.write(
-            "Hier erscheinen deine Erinnerungen."
+            "Hier erscheinen deine gespeicherten Erinnerungen."
         )
 
     else:
 
-        for _, row in memories.iloc[::-1].iterrows():
+        for item in reversed(memories):
 
             st.markdown(
                 f"""
                 <div class="memory-card">
 
                     <div class="memory-title">
-                        {row["title"]}
+                        {item["title"]}
                     </div>
 
                     <div class="memory-text">
-                        {row["memory"]}
+                        {item["memory"]}
                     </div>
 
                 </div>
                 """,
                 unsafe_allow_html=True
             )
+
+
+# ============================================================
+# INFO
+# ============================================================
+
+st.markdown("---")
+
+st.caption(
+    "💡 Deine Erinnerungen werden auf diesem Gerät gespeichert."
+)
