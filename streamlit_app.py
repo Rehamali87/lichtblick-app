@@ -43,7 +43,7 @@ body {{ background-color: #fff8e8; }}
 .memory {{ background-color:#fff8e8; padding:20px; border-radius:20px; margin-top:15px; border:3px solid {selected_color}; }}
 </style>
 """, unsafe_allow_html=True)
-
+st.markdown(f'<div class="light">{user_key}</div>', unsafe_allow_html=True)
 st.markdown('<div class="light">💡</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="main-title">{APP_NAME} …</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="subtitle">{MY_MESSAGE}</div>', unsafe_allow_html=True)
