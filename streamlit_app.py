@@ -1,26 +1,34 @@
 import streamlit as st
 import random
+import html
+from supabase import create_client, Client
+
 
 # ==================================================
 # 🌟 MEIN LICHTBLICK – HIER PROGRAMMIERE ICH!
 # ==================================================
-#
+
 # 🟢 ÄNDERE NUR DIE STELLEN IN DIESEM BEREICH!
-#
-# ==================================================
+
 
 # ✏️ 1. DEIN APP-NAME
 APP_NAME = "Lichtblick"
 
+
 # 🎨 2. DEINE FARBE
-# Probiere: "purple", "blue", "green", "orange", "red"
+# Probiere:
+# "purple", "blue", "green", "orange", "red", "pink"
+
 MY_COLOR = "purple"
+
 
 # 💬 3. DEINE SCHÖNE NACHRICHT
 MY_MESSAGE = "Das Leben hat schöne Momente."
 
+
 # ❓ 4. DEINE EIGENE FRAGE
 MY_QUESTION = "Was Schönes könnte heute passieren?"
+
 
 # ==================================================
 # 🔴 AB HIER NICHT ÄNDERN!
@@ -39,19 +47,44 @@ st.set_page_config(
 
 
 # --------------------------------
+# SUPABASE VERBINDUNG
+# --------------------------------
+
+@st.cache_resource
+def get_supabase() -> Client:
+    return create_client(
+        st.secrets["SUPABASE_URL"],
+        st.secrets["SUPABASE_PUBLISHABLE_KEY"]
+    )
+
+
+try:
+    supabase = get_supabase()
+except Exception:
+    st.error(
+        "⚠️ Die Datenbank ist noch nicht verbunden.\n\n"
+        "Bitte überprüfe die Supabase-Einstellungen."
+    )
+    st.stop()
+
+
+# --------------------------------
 # DESIGN
 # --------------------------------
 
-# Farben für die App
 COLORS = {
     "purple": "#9b59b6",
     "blue": "#3498db",
     "green": "#2ecc71",
     "orange": "#e67e22",
-    "red": "#e74c3c"
+    "red": "#e74c3c",
+    "pink": "#e91e63"
 }
 
-selected_color = COLORS.get(MY_COLOR, "#9b59b6")
+selected_color = COLORS.get(
+    MY_COLOR,
+    "#9b59b6"
+)
 
 
 st.markdown(
@@ -94,7 +127,7 @@ st.markdown(
 
 
 # --------------------------------
-# TITEL
+# KIND AUSWÄHLEN
 # --------------------------------
 
 st.markdown(
@@ -103,27 +136,64 @@ st.markdown(
 )
 
 st.markdown(
-    f'<div class="main-title">{APP_NAME} …</div>',
+    f'<div class="main-title">{html.escape(APP_NAME)} …</div>',
     unsafe_allow_html=True
 )
 
 st.markdown(
-    f'<div class="subtitle">'
-    f'{MY_MESSAGE}'
-    f'</div>',
+    f'<div class="subtitle">{html.escape(MY_MESSAGE)}</div>',
     unsafe_allow_html=True
 )
 
 st.write("")
 
 
+st.header("👋 Wer bist du?")
+
+
+child_code = st.selectbox(
+    "Wähle deinen Code:",
+    [
+        "K01",
+        "K02",
+        "K03",
+        "K04",
+        "K05",
+        "K06",
+        "K07",
+        "K08",
+        "K09",
+        "K10",
+        "K11",
+        "K12"
+    ]
+)
+
+
 # --------------------------------
-# ERINNERUNGEN SPEICHERN
+# ERINNERUNGEN AUS DATENBANK LADEN
 # --------------------------------
 
-if "memories" not in st.session_state:
-    st.session_state.memories = []
+def load_memories(child_code):
 
+    response = (
+        supabase
+        .table("memories")
+        .select("id, title, text, created_at")
+        .eq("child_code", child_code)
+        .order("created_at", desc=True)
+        .execute()
+    )
+
+    return response.data or []
+
+
+memories = load_memories(child_code)
+
+
+# --------------------------------
+# ERINNERUNG SPEICHERN
+# --------------------------------
 
 st.header("💛 Eine schöne Erinnerung")
 
@@ -140,18 +210,38 @@ text = st.text_area(
 )
 
 
-if st.button("💛 Erinnerung speichern"):
+if st.button(
+    "💛 Erinnerung speichern",
+    use_container_width=True
+):
 
-    if title or text:
+    if title.strip() or text.strip():
 
-        st.session_state.memories.append({
-            "title": title if title else "Ein schöner Moment",
-            "text": text if text else "💛"
-        })
+        try:
 
-        st.success(
-            "Deine Erinnerung wurde gespeichert. 💛"
-        )
+            supabase.table("memories").insert(
+                {
+                    "child_code": child_code,
+                    "title": title.strip()
+                    if title.strip()
+                    else "Ein schöner Moment",
+                    "text": text.strip()
+                    if text.strip()
+                    else "💛"
+                }
+            ).execute()
+
+            st.success(
+                "Deine Erinnerung wurde dauerhaft gespeichert. 💛"
+            )
+
+            st.rerun()
+
+        except Exception as e:
+
+            st.error(
+                "Die Erinnerung konnte nicht gespeichert werden."
+            )
 
     else:
 
@@ -174,10 +264,27 @@ if st.button(
     use_container_width=True
 ):
 
-    if st.session_state.memories:
+    # Datenbank neu laden
+    memories = load_memories(child_code)
 
-        memory = random.choice(
-            st.session_state.memories
+    if memories:
+
+        memory = random.choice(memories)
+
+        memory_title = html.escape(
+            memory.get("title", "")
+        )
+
+        memory_text = html.escape(
+            memory.get("text", "")
+        )
+
+        message = html.escape(
+            MY_MESSAGE
+        )
+
+        question = html.escape(
+            MY_QUESTION
         )
 
         st.markdown(
@@ -186,20 +293,20 @@ if st.button(
 
             <h2>❤️ Erinnerst du dich?</h2>
 
-            <h3>{memory["title"]}</h3>
+            <h3>{memory_title}</h3>
 
-            <p>{memory["text"]}</p>
+            <p>{memory_text}</p>
 
             <h3>
             🌿 Das Leben ruft dir zu:
             </h3>
 
             <p>
-            {MY_MESSAGE}
+            {message}
             </p>
 
             <h3>
-            ❓ {MY_QUESTION}
+            ❓ {question}
             </h3>
 
             <div class="light">
@@ -227,22 +334,31 @@ st.divider()
 st.header("📖 Meine Erinnerungen")
 
 
-if st.session_state.memories:
+memories = load_memories(child_code)
 
-    for i, memory in enumerate(
-        st.session_state.memories
-    ):
+
+if memories:
+
+    for memory in memories:
+
+        memory_title = html.escape(
+            memory.get("title", "")
+        )
+
+        memory_text = html.escape(
+            memory.get("text", "")
+        )
 
         st.markdown(
             f"""
             <div class="memory">
 
             <h3>
-            💛 {memory["title"]}
+            💛 {memory_title}
             </h3>
 
             <p>
-            {memory["text"]}
+            {memory_text}
             </p>
 
             </div>
