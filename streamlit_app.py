@@ -3,18 +3,10 @@ import random
 from uuid import uuid4
 from db import add_memory, get_memories
 
-# ==================================================
-# 🌟 MEIN LICHTBLICK – HIER PROGRAMMIERE ICH!
-# ==================================================
-
 APP_NAME = "Lichtblick"
 MY_COLOR = "purple"
 MY_MESSAGE = "Das Leben hat schöne Momente."
 MY_QUESTION = "Was Schönes könnte heute passieren?"
-
-# ==================================================
-# 🔴 AB HIER NICHT ÄNDERN!
-# ==================================================
 
 st.set_page_config(page_title=APP_NAME, page_icon="💡", layout="centered")
 
@@ -24,7 +16,7 @@ COLORS = {
 }
 selected_color = COLORS.get(MY_COLOR.lower(), "#9b59b6")
 
-# COOKIE / USER IDENTIFIER
+# Nutzer-ID erzeugen (jede Person hat eigene Erinnerungen)
 if "user_key" not in st.session_state:
     st.session_state.user_key = str(uuid4())
 
@@ -45,7 +37,6 @@ body {{ background-color: #fff8e8; }}
 st.markdown('<div class="light">💡</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="main-title">{APP_NAME} …</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="subtitle">{MY_MESSAGE}</div>', unsafe_allow_html=True)
-st.write("")
 
 # FORM
 st.header("💛 Eine schöne Erinnerung")
