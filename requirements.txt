@@ -1,4 +1,2 @@
 streamlit
-pysqlite3
-SQLAlchemy
 streamlit-cookies-controller
