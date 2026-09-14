@@ -3,10 +3,18 @@ import random
 from uuid import uuid4
 from db import add_memory, get_memories
 
+# ==================================================
+# 🌟 MEIN LICHTBLICK – HIER PROGRAMMIERE ICH!
+# ==================================================
+
 APP_NAME = "Lichtblick"
 MY_COLOR = "purple"
 MY_MESSAGE = "Das Leben hat schöne Momente."
 MY_QUESTION = "Was Schönes könnte heute passieren?"
+
+# ==================================================
+# 🔴 AB HIER NICHT ÄNDERN!
+# ==================================================
 
 st.set_page_config(page_title=APP_NAME, page_icon="💡", layout="centered")
 
@@ -16,11 +24,17 @@ COLORS = {
 }
 selected_color = COLORS.get(MY_COLOR.lower(), "#9b59b6")
 
-# Nutzer-ID erzeugen (jede Person hat eigene Erinnerungen)
-if "user_key" not in st.session_state:
-    st.session_state.user_key = str(uuid4())
+# ⭐ Nutzer-ID aus URL oder neu erzeugen
+query_params = st.query_params
 
-user_key = st.session_state.user_key
+if "user" in query_params:
+    user_key = query_params["user"]
+else:
+    user_key = str(uuid4())
+    st.query_params["user"] = user_key
+
+# ⭐ Jetzt hat jeder Nutzer eine eigene URL:
+# https://deineapp.streamlit.app/?user=1234-5678-ABCD
 
 # DESIGN
 st.markdown(f"""
