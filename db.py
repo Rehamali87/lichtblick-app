@@ -35,6 +35,8 @@ def get_memories(user_key):
     )
     rows = c.fetchall()
     conn.close()
+
+    # WICHTIG: Rückgabe IMMER als Dictionary
     return [{"title": r[0], "text": r[1]} for r in rows]
 
 init_db()
